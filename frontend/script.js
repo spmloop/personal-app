@@ -1,26 +1,42 @@
 "use strict";
 (function(){
   /* ---------------- storage abstraction ----------------
-     Uses the Claude artifact storage API when present, otherwise
-     falls back to the browser's localStorage (for GitHub Pages /
-     local use), and finally to in-memory as a last resort.        */
-  const hasWS = (typeof window !== "undefined" && window.storage && typeof window.storage.get === "function");
+     Priority: Backend API → Claude artifact storage → localStorage → in-memory
+     Backend URL is configured via window.__BACKEND__ in config.js
+       null / undefined  = localStorage only (GitHub Pages / offline)
+       ""                = same-origin API (frontend served by backend)
+       "https://..."     = remote backend URL                              */
+  const BACKEND = (typeof window !== "undefined" && window.__BACKEND__ != null) ? window.__BACKEND__ : null;
+  const hasWS   = (typeof window !== "undefined" && window.storage && typeof window.storage.get === "function");
   const mem = {};
+
+  async function _apiFetch(method, path, body){
+    const opts = { method, headers:{} };
+    if(body !== undefined){ opts.headers["Content-Type"]="application/json"; opts.body=JSON.stringify(body); }
+    const r = await fetch(BACKEND + path, opts);
+    if(!r.ok) throw new Error("API " + r.status);
+    return r.json();
+  }
+
   const Store = {
     async get(k){
-      if(hasWS){ try{ const r = await window.storage.get(k); return r ? r.value : null; }catch{ return null; } }
+      if(BACKEND !== null){ try{ const j=await _apiFetch("GET","/api/kv?k="+encodeURIComponent(k)); return j.value; }catch{} }
+      if(hasWS){ try{ const r=await window.storage.get(k); return r ? r.value : null; }catch{ return null; } }
       try{ return localStorage.getItem(k); }catch{ return (k in mem) ? mem[k] : null; }
     },
     async set(k,v){
+      if(BACKEND !== null){ try{ await _apiFetch("PUT","/api/kv?k="+encodeURIComponent(k),{value:v}); return true; }catch{} }
       if(hasWS){ try{ await window.storage.set(k,v); return true; }catch{ return false; } }
       try{ localStorage.setItem(k,v); return true; }catch{ mem[k]=v; return true; }
     },
     async del(k){
+      if(BACKEND !== null){ try{ await _apiFetch("DELETE","/api/kv?k="+encodeURIComponent(k)); return; }catch{} }
       if(hasWS){ try{ await window.storage.delete(k); }catch{} return; }
       try{ localStorage.removeItem(k); }catch{ delete mem[k]; }
     },
     async keys(prefix){
-      if(hasWS){ try{ const r = await window.storage.list(prefix); return (r && r.keys) ? r.keys : []; }catch{ return []; } }
+      if(BACKEND !== null){ try{ const j=await _apiFetch("GET","/api/kv/keys?prefix="+encodeURIComponent(prefix)); return j.keys||[]; }catch{} }
+      if(hasWS){ try{ const r=await window.storage.list(prefix); return (r && r.keys) ? r.keys : []; }catch{ return []; } }
       try{ return Object.keys(localStorage).filter(k=>k.startsWith(prefix)); }catch{ return Object.keys(mem).filter(k=>k.startsWith(prefix)); }
     }
   };
@@ -299,7 +315,7 @@
   async function renderHistory(){
     const keys=await Store.keys("dsr:report:");
     const list=$("#histList");
-    if(!keys.length){ list.innerHTML="<div class='hist-empty'>ยังไม่มีรายงานที่บันทึกไว้<br>กรอกข้อมูลในแท็บ “แก้ไข” ระบบจะบันทึกอัตโนมัติ</div>"; return; }
+    if(!keys.length){ list.innerHTML="<div class='hist-empty'>ยังไม่มีรายงานที่บันทึกไว้<br>กรอกข้อมูลในแท็บ "แก้ไข" ระบบจะบันทึกอัตโนมัติ</div>"; return; }
     const items=[];
     for(const k of keys){ const raw=await Store.get(k); if(!raw) continue; try{ items.push(JSON.parse(raw)); }catch{} }
     items.sort((a,b)=> (a.date<b.date?1:-1));
@@ -373,10 +389,10 @@
     fillForm(); render(); await saveReport(); switchPane("edit"); });
 
   /* ---------------- export PDF / image ---------------- */
-  function fileBase(){ return ("DailyReport_"+(state.date||"")+"_"+(state.reportNo||state.project||"").replace(/[^\w\u0E00-\u0E7F-]/g,"_")).replace(/_+/g,"_").replace(/_$/,""); }
+  function fileBase(){ return ("DailyReport_"+(state.date||"")+"_"+(state.reportNo||state.project||"").replace(/[^\w฀-๿-]/g,"_")).replace(/_+/g,"_").replace(/_$/,""); }
   $("#pdfBtn").addEventListener("click",()=>{ document.body.classList.add("exporting"); window.print(); setTimeout(()=>document.body.classList.remove("exporting"),600); });
   $("#imgBtn").addEventListener("click", async ()=>{
-    if(typeof html2canvas!=="function"){ alert("ตัวช่วยส่งออกรูปยังโหลดไม่สำเร็จ (ต้องต่ออินเทอร์เน็ตครั้งแรก) — ใช้ปุ่ม ‘บันทึก PDF’ แทนได้เลย"); return; }
+    if(typeof html2canvas!=="function"){ alert("ตัวช่วยส่งออกรูปยังโหลดไม่สำเร็จ (ต้องต่ออินเทอร์เน็ตครั้งแรก) — ใช้ปุ่ม 'บันทึก PDF' แทนได้เลย"); return; }
     const scaler=$("#scaler"); const prev=scaler.style.transform, prevH=scaler.style.height;
     document.body.classList.add("exporting"); scaler.style.transform="none"; scaler.style.height="auto";
     try{
