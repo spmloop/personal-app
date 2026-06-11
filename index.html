@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Daily Site Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+</head>
+<body>
+<div class="mtabs">
+  <button id="mEdit" class="on">กรอกข้อมูล</button>
+  <button id="mPrev">ตัวอย่าง A4</button>
+</div>
+
+<div id="app">
+  <!-- ============ CONTROL PANEL ============ -->
+  <aside class="control">
+    <div class="ctl-head">
+      <div class="ctl-mark" id="ctlMark">SR</div>
+      <div>
+        <div class="ctl-title">Site Daily Report</div>
+        <div class="ctl-sub">A4 · Export PDF / IMG</div>
+      </div>
+    </div>
+
+    <div class="seg">
+      <button data-pane="edit" class="on">แก้ไข</button>
+      <button data-pane="history">ประวัติ</button>
+      <button data-pane="settings">ตั้งค่า</button>
+    </div>
+
+    <div class="ctl-body">
+      <!-- EDIT PANE -->
+      <div class="pane on" id="pane-edit">
+        <fieldset>
+          <legend>หัวรายงาน</legend>
+          <div class="row2">
+            <label class="fld"><span>วันที่</span><input class="in" type="date" data-field="date"></label>
+            <label class="fld"><span>เลขที่รายงาน</span><input class="in" data-field="reportNo" placeholder="DR-001"></label>
+          </div>
+          <label class="fld"><span>โครงการ</span><input class="in" data-field="project" placeholder="Overhaul Planetary Gear ลูกหืบชุดที่ 1"></label>
+          <div class="row2">
+            <label class="fld"><span>ลูกค้า</span><input class="in" data-field="client"></label>
+            <label class="fld"><span>สถานที่</span><input class="in" data-field="location"></label>
+          </div>
+          <div class="row2">
+            <label class="fld"><span>สภาพอากาศ</span><input class="in" data-field="weather" placeholder="แจ่มใส"></label>
+            <label class="fld"><span>ช่วงเวลาทำงาน</span><input class="in" data-field="shift" placeholder="08:00–17:00"></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>กำลังคน</legend>
+          <div id="mpRows"></div>
+          <button class="mini" id="addMp">+ เพิ่มตำแหน่ง</button>
+        </fieldset>
+
+        <fieldset>
+          <legend>เนื้อหา</legend>
+          <label class="fld"><span>งานที่ดำเนินการ</span><textarea class="in" data-field="works" placeholder="• ถอดฝาครอบและเพลา input&#10;• ถอด Stage 1 (ใช้ความร้อนถอด bearing)"></textarea></label>
+          <label class="fld"><span>อุปสรรค / ปัญหา</span><textarea class="in" data-field="issues" placeholder="• รออะไหล่ bearing&#10;• ฝนตกช่วงบ่าย"></textarea></label>
+          <label class="fld"><span>แผนงานวันถัดไป</span><textarea class="in" data-field="plan"></textarea></label>
+          <label class="fld"><span>หมายเหตุ</span><textarea class="in" data-field="notes"></textarea></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>ภาพประกอบ</legend>
+          <div class="lay-toggle">
+            <button data-lay="2x2" class="on">2 × 2<small>หน้าแรก 4 รูป</small></button>
+            <button data-lay="1x3">1 × 3<small>หน้าแรก 3 รูป</small></button>
+          </div>
+          <button class="mini" id="addPhoto" style="margin-top:11px">+ เพิ่มรูปภาพ</button>
+          <input type="file" id="photoInput" accept="image/*" multiple hidden>
+          <div class="ph-list" id="phList"></div>
+          <p class="hint">รูปที่เกินจำนวนหน้าแรกจะไหลไปหน้าถัดไปอัตโนมัติ</p>
+        </fieldset>
+
+        <fieldset>
+          <legend>ผู้ลงนาม</legend>
+          <div class="signer">
+            <div class="who">ผู้จัดทำ</div>
+            <div class="row2">
+              <label class="fld"><span>ชื่อ</span><input class="in" data-field="preparedBy"></label>
+              <label class="fld"><span>ตำแหน่ง</span><input class="in" data-field="preparedRole" placeholder="Site Engineer"></label>
+            </div>
+            <div class="sign-ctl">
+              <button class="mini sg-btn" data-sign="prepared">✍️ วาดลายเซ็น</button>
+              <img class="sg-thumb" data-sgthumb="prepared" hidden>
+              <button class="icon-btn" data-sgclear="prepared" hidden>✕</button>
+            </div>
+          </div>
+          <div class="signer">
+            <div class="who">ผู้ตรวจสอบ</div>
+            <div class="row2">
+              <label class="fld"><span>ชื่อ</span><input class="in" data-field="reviewedBy"></label>
+              <label class="fld"><span>ตำแหน่ง</span><input class="in" data-field="reviewedRole" placeholder="Project Manager"></label>
+            </div>
+            <div class="sign-ctl">
+              <button class="mini sg-btn" data-sign="reviewed">✍️ วาดลายเซ็น</button>
+              <img class="sg-thumb" data-sgthumb="reviewed" hidden>
+              <button class="icon-btn" data-sgclear="reviewed" hidden>✕</button>
+            </div>
+          </div>
+          <div class="signer">
+            <div class="who">รับทราบ (ฝ่ายลูกค้า)</div>
+            <label class="fld"><span>ชื่อ</span><input class="in" data-field="clientBy"></label>
+            <div class="sign-ctl">
+              <button class="mini sg-btn" data-sign="client">✍️ วาดลายเซ็น</button>
+              <img class="sg-thumb" data-sgthumb="client" hidden>
+              <button class="icon-btn" data-sgclear="client" hidden>✕</button>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+
+      <!-- HISTORY PANE -->
+      <div class="pane" id="pane-history">
+        <div id="histList"></div>
+      </div>
+
+      <!-- SETTINGS PANE -->
+      <div class="pane" id="pane-settings">
+        <fieldset>
+          <legend>แบรนด์ (ใช้ทุกโครงการ)</legend>
+          <label class="fld"><span>ชื่อบริษัท</span><input class="in" data-set="company"></label>
+          <label class="fld"><span>คำโปรย / แผนก</span><input class="in" data-set="tagline" placeholder="Mechanical Maintenance Services"></label>
+          <div class="fld" style="margin-top:11px"><span>โลโก้</span></div>
+          <div class="logo-drop" id="logoDrop">คลิกเพื่ออัปโหลดโลโก้ (PNG/JPG)</div>
+          <input type="file" id="logoInput" accept="image/*" hidden>
+          <div class="logo-prev" id="logoPrev" hidden><img id="logoPrevImg"><button class="icon-btn" id="logoRm">✕</button></div>
+          <label class="fld" style="margin-top:13px"><span>สีหลัก (Accent)</span></label>
+          <div class="color-row">
+            <input type="color" id="accentInput" value="#15577d">
+            <div class="swatches" id="swatches"></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>ค่าตั้งต้นรายงานใหม่</legend>
+          <label class="fld"><span>หัวเรื่องรายงาน</span><input class="in" data-set="docTitle" placeholder="รายงานปฏิบัติงานประจำวัน"></label>
+          <label class="fld"><span>โครงการ (เริ่มต้น)</span><input class="in" data-set="defProject"></label>
+          <div class="row2">
+            <label class="fld"><span>ลูกค้า</span><input class="in" data-set="defClient"></label>
+            <label class="fld"><span>สถานที่</span><input class="in" data-set="defLocation"></label>
+          </div>
+          <button class="mini" id="saveMpPreset" style="margin-top:12px">บันทึกกำลังคนปัจจุบันเป็นค่าเริ่มต้น</button>
+        </fieldset>
+        <fieldset>
+          <legend>สำรอง / ย้ายข้อมูล</legend>
+          <button class="mini" id="exportData">⬇ สำรองข้อมูลทั้งหมด (.json)</button>
+          <button class="mini" id="importData" style="margin-top:8px">⬆ นำเข้าข้อมูลจากไฟล์</button>
+          <input type="file" id="importInput" accept="application/json,.json" hidden>
+          <p class="hint">รวมการตั้งค่า โลโก้ และรายงานทุกวันไว้ในไฟล์เดียว ใช้ย้ายไปเครื่องอื่นหรือสำรองกันข้อมูลหาย</p>
+        </fieldset>
+      </div>
+    </div>
+
+    <div class="ctl-foot">
+      <div class="save-state"><span class="dot" id="saveDot"></span><span id="saveText">บันทึกอัตโนมัติ</span></div>
+      <div class="btn-row">
+        <button class="btn ghost" id="newBtn">+ รายงานใหม่</button>
+        <button class="btn ghost" id="dupBtn">ทำสำเนาล่าสุด</button>
+      </div>
+      <div class="btn-row exp">
+        <button class="btn primary" id="pdfBtn">บันทึก PDF</button>
+        <button class="btn" id="imgBtn">บันทึกรูปภาพ</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ A4 VIEWER ============ -->
+  <main class="viewer" id="viewer">
+    <div class="scaler" id="scaler">
+      <div id="pages">
+        <div class="page" id="page">
+          <span class="tick tl"></span><span class="tick tr"></span><span class="tick bl"></span><span class="tick br"></span>
+
+          <header class="rpt-head">
+            <div class="rpt-brand">
+              <div class="rpt-logo" id="pvLogo"><span class="ph">LOGO</span></div>
+              <div>
+                <div class="rpt-company" id="pvCompany">ชื่อบริษัทของคุณ</div>
+                <div class="rpt-tagline" id="pvTagline"></div>
+              </div>
+            </div>
+            <div class="rpt-titleblock-top">
+              <div class="rpt-doctitle" id="pvDocTitle">รายงานปฏิบัติงานประจำวัน</div>
+              <div class="rpt-docsub">Daily Site Report</div>
+            </div>
+          </header>
+          <div class="rpt-accentrule"></div>
+
+          <section class="titleblock">
+            <div class="tb span3"><div class="tb-k">Project / โครงการ</div><div class="tb-v" id="pvProject">—</div></div>
+            <div class="tb span3"><div class="tb-k">Client / ลูกค้า</div><div class="tb-v" id="pvClient">—</div></div>
+            <div class="tb span2"><div class="tb-k">Location / สถานที่</div><div class="tb-v" id="pvLocation">—</div></div>
+            <div class="tb span2"><div class="tb-k">Date / วันที่</div><div class="tb-v mono" id="pvDate">—</div></div>
+            <div class="tb"><div class="tb-k">Report No</div><div class="tb-v mono" id="pvReportNo">—</div></div>
+            <div class="tb"><div class="tb-k">Weather</div><div class="tb-v" id="pvWeather">—</div></div>
+            <div class="tb span3"><div class="tb-k">Working Hours / ช่วงเวลา</div><div class="tb-v mono" id="pvShift">—</div></div>
+            <div class="tb span3"><div class="tb-k">Total Manpower / กำลังคนรวม</div><div class="tb-v mono" id="pvMpHead">0</div></div>
+          </section>
+
+          <section class="block">
+            <div class="block-label">กำลังคน <span>MANPOWER</span></div>
+            <table class="mp">
+              <thead><tr><th>ตำแหน่ง / Role</th><th class="q">จำนวน</th></tr></thead>
+              <tbody id="pvMp"></tbody>
+              <tfoot><tr><td>รวม / Total</td><td class="q" id="pvMpTotal">0</td></tr></tfoot>
+            </table>
+          </section>
+
+          <section class="block"><div class="block-label">งานที่ดำเนินการ <span>WORK PERFORMED</span></div><div class="prose" id="pvWorks"></div></section>
+          <section class="block"><div class="block-label">อุปสรรค / ปัญหา <span>ISSUES</span></div><div class="prose" id="pvIssues"></div></section>
+          <section class="block"><div class="block-label">แผนงานวันถัดไป <span>NEXT-DAY PLAN</span></div><div class="prose" id="pvPlan"></div></section>
+          <section class="block"><div class="block-label">หมายเหตุ <span>REMARKS</span></div><div class="prose" id="pvNotes"></div></section>
+
+          <section class="block">
+            <div class="block-label">ภาพประกอบ <span>PHOTOS</span></div>
+            <div class="photos" id="pvPhotos" data-layout="2x2"></div>
+          </section>
+
+          <footer class="sign">
+            <div class="sign-cell"><div class="sign-line"><img class="sign-img" id="pvPrepSign" alt=""></div><div class="sign-name" id="pvPrepName">—</div><div class="sign-role">ผู้จัดทำ / <span id="pvPrepRole"></span></div></div>
+            <div class="sign-cell"><div class="sign-line"><img class="sign-img" id="pvRevSign" alt=""></div><div class="sign-name" id="pvRevName">—</div><div class="sign-role">ผู้ตรวจสอบ / <span id="pvRevRole"></span></div></div>
+            <div class="sign-cell"><div class="sign-line"><img class="sign-img" id="pvCliSign" alt=""></div><div class="sign-name" id="pvCliName">—</div><div class="sign-role">รับทราบ (ฝ่ายลูกค้า)</div></div>
+          </footer>
+          <div class="pfoot"><span id="pvFootCo">—</span><span><span id="pvFootGen"></span> · <span id="pvFootPage">หน้า 1/1</span></span></div>
+        </div>
+        <!-- continuation pages injected here -->
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- signature modal -->
+<div class="modal" id="signModal" hidden>
+  <div class="modal-card">
+    <div class="modal-head"><span id="signTitle">วาดลายเซ็น</span><button id="signClose">✕</button></div>
+    <canvas id="signCanvas"></canvas>
+    <div class="modal-foot">
+      <button class="btn ghost" id="signClearBtn">ล้าง</button>
+      <button class="btn primary" id="signSaveBtn">ใช้ลายเซ็นนี้</button>
+    </div>
+  </div>
+</div>
+
+<script src="./script.js" defer></script>
+</body>
+</html>
